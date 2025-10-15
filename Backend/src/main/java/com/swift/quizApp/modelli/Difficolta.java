@@ -24,9 +24,9 @@ public class Difficolta {
     private List<Domanda> domande;
 
     public Difficolta() {}
-    public Difficolta(Integer id, String descrizione, float moltiplicatore) {
-        this.id = id;
+    public Difficolta(String descrizione, float moltiplicatore) {
         this.descrizione = descrizione;
+        this.moltiplicatore = moltiplicatore;
     }
 
     public Integer getId() {

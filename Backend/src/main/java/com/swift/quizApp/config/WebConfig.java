@@ -1,4 +1,4 @@
-package com.swift.quizApp;
+package com.swift.quizApp.config;
 
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Configuration;
