@@ -5,6 +5,7 @@ import jakarta.persistence.*;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 
+import java.time.LocalDate;
 import java.util.List;
 
 @Entity
@@ -20,15 +21,18 @@ public class Utente {
 
     @NotNull
     @JsonIgnore
+    @Size(min = 60, max = 60)
     private String password;
 
-    @NotNull
     @Size(min = 2, max = 255)
     private String imgPath;
 
     @NotNull
     @Size(min = 2, max = 50)
     private String email;
+
+    @NotNull
+    private LocalDate dataNascita;
 
     @OneToMany(mappedBy = "utente", cascade = CascadeType.ALL)
     private List<Quiz> quiz;
@@ -40,11 +44,12 @@ public class Utente {
     private List<QuizRisultato> risultatiQuiz;
 
     public Utente() {}
-    public Utente(String username, String password, String imgPath, String email) {
+    public Utente(String username, String password, String imgPath, String email, LocalDate dataNascita) {
         this.username = username;
         this.password = password;
         this.imgPath = imgPath;
         this.email = email;
+        this.dataNascita = dataNascita;
     }
 
     public Integer getId() {
@@ -80,5 +85,12 @@ public class Utente {
     }
     public void setEmail(String email) {
         this.email = email;
+    }
+
+    public LocalDate getDataNascita() {
+        return dataNascita;
+    }
+    public void setDataNascita(LocalDate dataNascita) {
+        this.dataNascita = dataNascita;
     }
 }
