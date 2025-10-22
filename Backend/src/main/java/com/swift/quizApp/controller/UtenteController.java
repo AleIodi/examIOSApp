@@ -10,7 +10,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
@@ -29,9 +28,6 @@ import java.util.stream.Collectors;
 public class UtenteController {
     @Autowired
     UtenteDAO utenteRepo;
-
-    @Autowired
-    private PasswordEncoder passwordEncoder;
 
     @Value("${upload.dir}")
     private String uploadDir;
@@ -70,14 +66,14 @@ public class UtenteController {
             return ResponseEntity.badRequest().body(response);
         }
 
-        Utente utenteLoggato = utenteRepo.findByUsername(dto.getUsername());
-        if (utenteLoggato == null || !passwordEncoder.matches(dto.getPassword(), utenteLoggato.getPassword())) {
+        Utente utenteLoggato = utenteRepo.findByUsernameAndPassword(dto.getUsername(), dto.getPassword());
+        if (utenteLoggato == null) {
             response.put("message", "Validation error");
             response.put("errors", List.of("Invalid username or password"));
             return ResponseEntity.badRequest().body(response);
         }
 
-        sessione.setAttribute("visitatore_id", utenteLoggato.getId());
+        sessione.setAttribute("user_id", utenteLoggato.getId());
         response.put("message", "Login successful");
         response.put("user", utenteLoggato);
         return ResponseEntity.ok(response);
@@ -125,7 +121,7 @@ public class UtenteController {
             } catch (IOException e) {
                 response.put("message", "Error saving profile picture");
                 response.put("errors", List.of(e.getMessage()));
-                return ResponseEntity.status(500).body(response);
+                return ResponseEntity.internalServerError().body(response);
             }
         }
 
@@ -133,12 +129,12 @@ public class UtenteController {
         newUtente.setUsername(dto.getUsername());
         newUtente.setEmail(dto.getEmail());
         newUtente.setDataNascita(dto.getDataNascita());
-        newUtente.setPassword(passwordEncoder.encode(dto.getPassword()));
+        newUtente.setPassword(dto.getPassword());
         newUtente.setImgPath(profilePicPath);
 
         utenteRepo.save(newUtente);
 
-        sessione.setAttribute("visitatore_id", newUtente.getId());
+        sessione.setAttribute("user_id", newUtente.getId());
         response.put("message", "Sign up successful");
         response.put("user", newUtente);
         return ResponseEntity.ok(response);

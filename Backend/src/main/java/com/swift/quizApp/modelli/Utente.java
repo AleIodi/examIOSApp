@@ -21,7 +21,6 @@ public class Utente {
 
     @NotNull
     @JsonIgnore
-    @Size(min = 60, max = 60)
     private String password;
 
     @Size(min = 2, max = 255)
