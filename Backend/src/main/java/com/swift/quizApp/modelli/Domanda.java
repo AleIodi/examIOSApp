@@ -66,4 +66,11 @@ public class Domanda {
     public void setDifficolta(Difficolta difficolta) {
         this.difficolta = difficolta;
     }
+
+    public List<Opzione> getOpzioni() {
+        return opzioni;
+    }
+    public void setOpzioni(List<Opzione> opzioni) {
+        this.opzioni = opzioni;
+    }
 }

@@ -42,4 +42,11 @@ public class Difficolta {
     public void setDescrizione(String descrizione) {
         this.descrizione = descrizione;
     }
+
+    public void setMoltiplicatore(float moltiplicatore) {
+        this.moltiplicatore = moltiplicatore;
+    }
+    public float getMoltiplicatore() {
+        return moltiplicatore;
+    }
 }

@@ -67,4 +67,8 @@ public class Quiz {
     public void setUtente(Utente utente) {
         this.utente = utente;
     }
+
+    public List<QuizDomanda> getQuizDomande() {
+        return quizDomande;
+    }
 }

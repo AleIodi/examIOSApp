@@ -18,6 +18,10 @@ public class QuizDomanda {
     private Quiz quiz;
 
     public QuizDomanda() {}
+    public QuizDomanda(Quiz quiz, Domanda domanda) {
+        this.quiz = quiz;
+        this.domanda = domanda;
+    }
 
     public Integer getId() {
         return id;

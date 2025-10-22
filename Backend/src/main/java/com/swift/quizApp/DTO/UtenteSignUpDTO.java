@@ -42,7 +42,6 @@ public class UtenteSignUpDTO {
     public void setEmail(String email) { this.email = email; }
 
     public LocalDate getDataNascita() { return dataNascita; }
-
     public void setDataNascita(LocalDate dataNascita) { this.dataNascita = dataNascita; }
 
     public String getPassword() { return password; }

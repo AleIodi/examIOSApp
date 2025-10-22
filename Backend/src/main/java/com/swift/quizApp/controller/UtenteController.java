@@ -1,6 +1,8 @@
 package com.swift.quizApp.controller;
 
+import com.swift.quizApp.DAO.QuizRisultatoDAO;
 import com.swift.quizApp.DAO.UtenteDAO;
+import com.swift.quizApp.DTO.RispostaLoginDTO;
 import com.swift.quizApp.DTO.UtenteLoginDTO;
 import com.swift.quizApp.DTO.UtenteSignUpDTO;
 import com.swift.quizApp.modelli.Utente;
@@ -20,6 +22,10 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.LocalTime;
+import java.time.Period;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -28,6 +34,9 @@ import java.util.stream.Collectors;
 public class UtenteController {
     @Autowired
     UtenteDAO utenteRepo;
+
+    @Autowired
+    private QuizRisultatoDAO quizRisultatoRepo;
 
     @Value("${upload.dir}")
     private String uploadDir;
@@ -73,9 +82,20 @@ public class UtenteController {
             return ResponseEntity.badRequest().body(response);
         }
 
+        LocalDate today = LocalDate.now();
+        LocalDate startOfWeek = today.with(java.time.DayOfWeek.MONDAY);
+        LocalDate endOfWeek = today.with(java.time.DayOfWeek.SUNDAY);
+        LocalDateTime weekStart = startOfWeek.atStartOfDay();
+        LocalDateTime weekEnd = endOfWeek.atTime(LocalTime.MAX);
+
+        Integer rank = quizRisultatoRepo.getWeeklyRankByUtenteId(utenteLoggato.getId(),weekStart,weekEnd);
+        Float punti= quizRisultatoRepo.getWeeklyScoreByUtenteId(utenteLoggato.getId(),weekStart,weekEnd);
+
+        RispostaLoginDTO rispostaLoginDTO=new RispostaLoginDTO(utenteLoggato,rank,punti);
+
         sessione.setAttribute("user_id", utenteLoggato.getId());
         response.put("message", "Login successful");
-        response.put("user", utenteLoggato);
+        response.put("user", rispostaLoginDTO);
         return ResponseEntity.ok(response);
     }
 
@@ -88,6 +108,14 @@ public class UtenteController {
             errors.addAll(bindingResult.getAllErrors().stream()
                     .map(error -> error.getDefaultMessage())
                     .collect(Collectors.toList()));
+        }
+
+        if (dto.getDataNascita() != null) {
+            LocalDate today = LocalDate.now();
+            int age = Period.between(dto.getDataNascita(), today).getYears();
+            if (age < 14) {
+                errors.add("You must be at least 14 years old to register");
+            }
         }
 
         if (utenteRepo.findByUsername(dto.getUsername()) != null) {
