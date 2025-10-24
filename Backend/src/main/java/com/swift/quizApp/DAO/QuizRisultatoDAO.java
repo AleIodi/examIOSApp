@@ -5,6 +5,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.CrudRepository;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 public interface QuizRisultatoDAO extends CrudRepository<QuizRisultato, Integer> {
     @Query("""
@@ -34,4 +35,7 @@ public interface QuizRisultatoDAO extends CrudRepository<QuizRisultato, Integer>
 
     @Query("SELECT SUM(r.punteggioTotale) FROM QuizRisultato r WHERE r.utente.id = :utenteId")
     Float getTotalScoreByUtenteId(Integer utenteId);
+
+
+    List<QuizRisultato> findByUtenteIdOrderByCompletatoIlDesc(Integer userId);
 }

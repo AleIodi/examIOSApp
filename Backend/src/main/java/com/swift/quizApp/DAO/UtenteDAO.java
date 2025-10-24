@@ -7,4 +7,5 @@ public interface UtenteDAO extends CrudRepository<Utente, Integer> {
     Utente findByUsername(String username);
     Utente findByEmail(String email);
     Utente findByUsernameAndPassword(String username, String password);
+    Utente getUtenteById(Integer userId);
 }

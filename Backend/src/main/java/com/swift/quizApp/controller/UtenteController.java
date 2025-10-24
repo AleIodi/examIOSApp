@@ -6,6 +6,7 @@ import com.swift.quizApp.DTO.RispostaLoginDTO;
 import com.swift.quizApp.DTO.UtenteLoginDTO;
 import com.swift.quizApp.DTO.UtenteSignUpDTO;
 import com.swift.quizApp.modelli.Utente;
+import com.swift.quizApp.modelli.QuizRisultato;
 import jakarta.servlet.http.HttpSession;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -175,6 +176,95 @@ public class UtenteController {
         sessione.invalidate();
 
         response.put("message", "Logout successful");
+        return ResponseEntity.ok(response);
+    }
+
+    @GetMapping("/getRankScore")
+    public ResponseEntity<Map<String, Object>> getRankScore(HttpSession sessione) {
+        Map<String, Object> response = new HashMap<>();
+
+        LocalDate today = LocalDate.now();
+        LocalDate startOfWeek = today.with(java.time.DayOfWeek.MONDAY);
+        LocalDate endOfWeek = today.with(java.time.DayOfWeek.SUNDAY);
+        LocalDateTime weekStart = startOfWeek.atStartOfDay();
+        LocalDateTime weekEnd = endOfWeek.atTime(LocalTime.MAX);
+
+        Integer userId = (Integer) sessione.getAttribute("user_id");
+        Integer rank = quizRisultatoRepo.getWeeklyRankByUtenteId(userId,weekStart,weekEnd);
+        Float punti= quizRisultatoRepo.getWeeklyScoreByUtenteId(userId,weekStart,weekEnd);
+
+        response.put("rankPunti", List.of(rank,punti));
+        return ResponseEntity.ok(response);
+    }
+
+    @GetMapping("/profile")
+    public ResponseEntity<Map<String, Object>> getUserProfile(@PathVariable("user_id") Integer userId) {
+        Map<String, Object> response = new HashMap<>();
+
+        Utente utente = utenteRepo.findById(userId).orElse(null);
+
+        if (utente == null) {
+            response.put("message", "User not found");
+            return ResponseEntity.badRequest().body(response);
+        }
+
+        List<QuizRisultato> risultati = quizRisultatoRepo.findByUtenteIdOrderByCompletatoIlDesc(userId);
+
+        int totalQuiz = risultati.size();
+        float totalScore = 0;
+        int totalCorrette = 0;
+        int totalDomande = 0;
+
+        for (QuizRisultato risultato : risultati) {
+            totalScore += risultato.getPunteggioTotale();
+            totalCorrette += risultato.getRisposteCorrette();
+            totalDomande += risultato.getQuiz().getQuizDomande().size();
+        }
+
+        float averageScore = totalQuiz > 0 ? totalScore / totalQuiz : 0;
+        float accuracyPercentage = totalDomande > 0 ? (float) totalCorrette / totalDomande * 100 : 0;
+
+        LocalDate today = LocalDate.now();
+        LocalDate startOfWeek = today.with(java.time.DayOfWeek.MONDAY);
+        LocalDate endOfWeek = today.with(java.time.DayOfWeek.SUNDAY);
+        LocalDateTime weekStart = startOfWeek.atStartOfDay();
+        LocalDateTime weekEnd = endOfWeek.atTime(LocalTime.MAX);
+        Integer currentRank = quizRisultatoRepo.getWeeklyRankByUtenteId(userId,weekStart,weekEnd);
+        Float currentScore = quizRisultatoRepo.getWeeklyScoreByUtenteId(userId,weekStart,weekEnd);
+
+        List<Map<String, Object>> quizs = risultati.stream()
+                .limit(10)
+                .map(r -> {
+                    Map<String, Object> quizData = new HashMap<>();
+                    quizData.put("quizId", r.getQuiz().getId());
+                    quizData.put("completatoIl", r.getCompletatoIl());
+                    quizData.put("punteggioTotale", r.getPunteggioTotale());
+                    quizData.put("risposteCorrette", r.getRisposteCorrette());
+                    quizData.put("totaleDomande", r.getQuiz().getQuizDomande().size());
+                    return quizData;
+                })
+                .collect(Collectors.toList());
+
+        Map<String, Object> profile = new HashMap<>();
+        profile.put("userId", utente.getId());
+        profile.put("username", utente.getUsername());
+        profile.put("email", utente.getEmail());
+        profile.put("imgPath", utente.getImgPath());
+        profile.put("dataNascita", utente.getDataNascita());
+
+        Map<String, Object> statistics = new HashMap<>();
+        statistics.put("totalQuizzes", totalQuiz);
+        statistics.put("averageScore", averageScore);
+        statistics.put("totalCorrectAnswers", totalCorrette);
+        statistics.put("totalQuestions", totalDomande);
+        statistics.put("accuracyPercentage", Math.round(accuracyPercentage * 100) / 100.0);
+        statistics.put("currentRank", currentRank);
+        statistics.put("currentScore", currentScore);
+        statistics.put("lastTenQuizzes", quizs);
+
+        profile.put("statistics", statistics);
+
+        response.put("profile", profile);
         return ResponseEntity.ok(response);
     }
 }

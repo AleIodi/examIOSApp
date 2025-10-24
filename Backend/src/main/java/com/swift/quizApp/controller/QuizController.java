@@ -10,9 +10,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.*;
 
-import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.time.LocalTime;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -48,6 +46,32 @@ public class QuizController {
     @Autowired
     private OpzioneDAO opzioneRepo;
 
+    private ResponseEntity<Map<String, Object>> validationErrors(BindingResult bindingResult) {
+        Map<String, Object> response = new HashMap<>();
+        List<String> errors = bindingResult.getAllErrors().stream()
+                .map(error -> error.getDefaultMessage())
+                .collect(Collectors.toList());
+        response.put("message", "Validation error");
+        response.put("errors", errors);
+        return ResponseEntity.badRequest().body(response);
+    }
+
+    private Utente getCurrentUser(HttpSession session) {
+        Integer userId = (Integer) session.getAttribute("user_id");
+        return utenteRepo.findById(userId).orElse(null);
+    }
+
+    private ResponseEntity<Map<String, Object>> nonAutorizzato() {
+        Map<String, Object> response = new HashMap<>();
+        response.put("message", "Unauthorized");
+        response.put("errors", List.of("This quiz does not belong to you"));
+        return ResponseEntity.status(403).body(response);
+    }
+
+    private boolean quizDellUtente(Quiz quiz, Integer userId) {
+        return quiz.getUtente().getId().equals(userId);
+    }
+
     @GetMapping("/caricaUI")
     public ResponseEntity<Map<String, Object>> caricaUI() {
         Map<String, Object> response = new HashMap<>();
@@ -66,17 +90,14 @@ public class QuizController {
         Map<String, Object> response = new HashMap<>();
 
         if (bindingResult.hasErrors()) {
-            List<String> errors = bindingResult.getAllErrors().stream()
-                    .map(error -> error.getDefaultMessage())
-                    .collect(Collectors.toList());
-            response.put("message", "Validation error");
-            response.put("errors", errors);
-            return ResponseEntity.badRequest().body(response);
+            return validationErrors(bindingResult);
         }
 
-        Integer userId = (Integer) session.getAttribute("user_id");
-        Utente utente = utenteRepo.findById(userId).orElse(null);
-        assert utente != null;
+        Utente utente = getCurrentUser(session);
+        if (utente == null) {
+            response.put("message", "User not found");
+            return ResponseEntity.badRequest().body(response);
+        }
 
         int numFacili, numMedie, numDifficili;
         switch (dto.getDifficoltaId()) {
@@ -151,17 +172,14 @@ public class QuizController {
         Map<String, Object> response = new HashMap<>();
 
         if (bindingResult.hasErrors()) {
-            List<String> errors = bindingResult.getAllErrors().stream()
-                    .map(error -> error.getDefaultMessage())
-                    .collect(Collectors.toList());
-            response.put("message", "Validation error");
-            response.put("errors", errors);
-            return ResponseEntity.badRequest().body(response);
+            return validationErrors(bindingResult);
         }
 
-        Integer userId = (Integer) session.getAttribute("user_id");
-        Utente utente = utenteRepo.findById(userId).orElse(null);
-        assert utente != null;
+        Utente utente = getCurrentUser(session);
+        if (utente == null) {
+            response.put("message", "User not found");
+            return ResponseEntity.badRequest().body(response);
+        }
 
         Quiz quiz = quizRepo.findById(quizId).orElse(null);
         Domanda domanda = domandaRepo.findById(dto.getDomandaId()).orElse(null);
@@ -173,14 +191,11 @@ public class QuizController {
             return ResponseEntity.badRequest().body(response);
         }
 
-        if (!quiz.getUtente().getId().equals(userId)) {
-            response.put("message", "Unauthorized");
-            response.put("errors", List.of("This quiz does not belong to you"));
-            return ResponseEntity.status(403).body(response);
+        if (!quizDellUtente(quiz, utente.getId())) {
+            return nonAutorizzato();
         }
 
-        RispostaUtente risposta;
-        risposta = new RispostaUtente();
+        RispostaUtente risposta = new RispostaUtente();
         risposta.setUtente(utente);
         risposta.setQuiz(quiz);
         risposta.setDomanda(domanda);
@@ -195,7 +210,12 @@ public class QuizController {
     public ResponseEntity<Map<String, Object>> completeQuiz(@PathVariable("quiz_id") Integer quizId, HttpSession session) {
         Map<String, Object> response = new HashMap<>();
 
-        Integer userId = (Integer) session.getAttribute("user_id");
+        Utente utente = getCurrentUser(session);
+        if (utente == null) {
+            response.put("message", "User not found");
+            return ResponseEntity.badRequest().body(response);
+        }
+
         Quiz quiz = quizRepo.findById(quizId).orElse(null);
 
         if (quiz == null) {
@@ -203,10 +223,8 @@ public class QuizController {
             return ResponseEntity.badRequest().body(response);
         }
 
-        if (!quiz.getUtente().getId().equals(userId)) {
-            response.put("message", "Unauthorized");
-            response.put("errors", List.of("This quiz does not belong to you"));
-            return ResponseEntity.status(403).body(response);
+        if (!quizDellUtente(quiz, utente.getId())) {
+            return nonAutorizzato();
         }
 
         List<RispostaUtente> risposte = rispostaUtenteRepo.findByQuizId(quizId);
